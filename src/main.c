@@ -118,11 +118,11 @@ e_status not_enough_args(int argc, char * argv[])
 	fprintf(stderr, "\n");
 	fprintf(stderr, "This program provides low level access to the scoreboard display.\n");
 	fprintf(stderr, "Usage:\n");
-	fprintf(stderr, "\t%s target [value]\n", argv[0]);
+	fprintf(stderr, "\t%s target [digit]\n", argv[0]);
 	fprintf(stderr, "\t%s pwm value|on|off [value]\n", argv[0]);
 	fprintf(stderr, "\t\ttarget: The Target number to be changed.\n");
 	fprintf(stderr, "\t\t        Abbreviations from list below.\n");
-	fprintf(stderr, "\t\tvalue:  The ASCII Symbol to write. Can be any ASCII value,\n");
+	fprintf(stderr, "\t\tdigit:  The ASCII Symbol to write. Can be any ASCII value,\n");
 	fprintf(stderr, "\t\t        but unknown values are replaced by a '-'.\n");
 	fprintf(stderr, "\t\t        If string is provided, only the first symbol is written.\n");
 	fprintf(stderr, "\t\tpwm:    Change the PWM settings.\n");

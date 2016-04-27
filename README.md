@@ -27,13 +27,23 @@ Navigate to the debug or release folders and run `make`.
 
 Usage:
 ------
-    ```
-    scoreboard target [value]
+
+    scoreboard target [digit]
+    scoreboard pwm value|on|off [value]
         target: The Target number to be changed.
                 Abbreviations from list below.
-        value:  The ASCII Symbol to write. Can be any ASCII value,
+        digit:  The ASCII Symbol to write. Can be any ASCII value,
                 but unknown values are replaced by a '-'.
                 If string is provided, only the first symbol is written.
+        pwm:    Change the PWM settings.
+                If a single value is given, it is interpreted as brightness
+                steps between 0 and 10. 10 is brightest
+                If two values are given, they are interpreted as clock cycles.
+                The first value specifies the on-time, the second the off-time.
+                If 'off' is given instead of the first value, pwm is disabled.
+                In that case, the led are enabled permanently.
+                Replacing the value by 'on' reenables pwm.
+                This is not done automatically if values are changed.
     
         Abbreviation list:
                 H1:  Home ones
@@ -42,7 +52,7 @@ Usage:
                 R10: Road tens
                 I1:  Inning ones
                 I10: Inning tens
-    ```
+
 Alternatively, you can use the system i2c commands from the command line:  
     ```  
     addr=0x10  
