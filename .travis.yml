@@ -1,0 +1,12 @@
+language: c
+compiler: gcc
+branches:
+  only:
+    - master
+    - /^dev\/.*$/
+
+install:
+  - cd Debug
+
+script:
+  - make 
