@@ -6,6 +6,12 @@ branches:
     - /^dev\/.*$/
 
 install:
+  - git clone git://git.drogon.net/wiringPi
+  - cd wiringPi/wiringPi
+  - make
+  - cd ../..
+  - cp wiringPi/wiringPi/libwiringPi.so.2.* Debug/libwiringPi.so
+  - cp wiringPi/wiringPi/wiringPiI2C.h src
   - cd Debug
 
 script:
