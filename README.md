@@ -25,6 +25,14 @@ Build:
 ------
 Navigate to the debug or release folders and run `make`.
 
+Tests:
+------
+The tests run on any Linux PC, no Raspberry Pi, wiringPi or I2C hardware required:
+
+    make -C tests
+
+`src/main.c` is built against a mocked `wiringPiI2C.h` (`tests/mock`) that logs every I2C call, and `tests/run_tests.sh` checks the exit code and the exact I2C traffic of each command line. Tests marked `XFAIL` document known bugs; they don't fail the suite and are reported as `XPASS` once fixed.
+
 Usage:
 ------
 
