@@ -4,6 +4,17 @@
 #include <string.h>
 
 /**
+ * i2c opcodes of the scoreboard_atmega8_i2c firmware protocol this tool was
+ * written for (firmware state of 2016-04, single pwm channel).
+ * Note: later firmware versions use a different opcode layout.
+ */
+#define CMD_PWM_ON_TIME  0x00
+#define CMD_PWM_OFF_TIME 0x01
+#define CMD_PWM_DISABLE  0x02
+#define CMD_PWM_ENABLE   0x03
+#define CMD_PWM_APPLY    0x04
+
+/**
  * List of statuscodes
  */
 typedef enum e_status__
@@ -27,31 +38,43 @@ typedef enum e_status__
  */
 e_status pwm(int fd, int argc, char * argv[])
 {
-	if (!fd)
+	if (fd < 0)
 	{
 		return E_FAILURE_ILLEGAL_FD;
 	}
 
+	int high, low;
 	if(argc < 4)
 	{
 		//Interpretiere als "Stufe" 0 - 10
-		//fprintf(stdout, "Writing empty output\n");
-		int high,low,max,min;
-		max = 10000;
-		min = 200;
-		high = ((max - min) / 10 * atoi(argv[2])) + min;
-		low  = ((max - min) / 10 * (10 - atoi(argv[2]))) + min;
-		wiringPiI2CWriteReg16(fd, 0x00, high);
-		wiringPiI2CWriteReg16(fd, 0x01, low);
-		wiringPiI2CWrite(fd, 0x04);
+		const int max = 10000;
+		const int min = 200;
+		int step = atoi(argv[2]);
+		if (step < 0)
+		{
+			step = 0;
+		}
+		else if (step > 10)
+		{
+			step = 10;
+		}
+		high = ((max - min) / 10 * step) + min;
+		low  = ((max - min) / 10 * (10 - step)) + min;
 	}
 	else
 	{
 		//Interpretiere als direkt zu schreibende Werte:
-		//fprintf(stdout, "Writing: %c\n", *argv[2]);
-		wiringPiI2CWriteReg16(fd, 0x00, atoi(argv[2]));
-		wiringPiI2CWriteReg16(fd, 0x01, atoi(argv[3]));
-		wiringPiI2CWrite(fd, 0x04);
+		high = atoi(argv[2]);
+		low  = atoi(argv[3]);
+	}
+
+	// Store on/off time and apply the new timing.
+	// Enabling/disabling pwm is left to the 'on'/'off' commands.
+	if (wiringPiI2CWriteReg16(fd, CMD_PWM_ON_TIME, high & 0xFFFF) < 0
+		|| wiringPiI2CWriteReg16(fd, CMD_PWM_OFF_TIME, low & 0xFFFF) < 0
+		|| wiringPiI2CWrite(fd, CMD_PWM_APPLY) < 0)
+	{
+		return E_FAILURE_PWM;
 	}
 	return E_SUCCESS;
 }
@@ -64,7 +87,10 @@ e_status pwm(int fd, int argc, char * argv[])
  */
 e_status pwm_enable(int fd)
 {
-	wiringPiI2CWrite(fd, 0x03);
+	if (wiringPiI2CWrite(fd, CMD_PWM_ENABLE) < 0)
+	{
+		return E_FAILURE_PWM;
+	}
 	return E_SUCCESS;
 }
 
@@ -76,7 +102,10 @@ e_status pwm_enable(int fd)
  */
 e_status pwm_disable(int fd)
 {
-	wiringPiI2CWrite(fd, 0x02);
+	if (wiringPiI2CWrite(fd, CMD_PWM_DISABLE) < 0)
+	{
+		return E_FAILURE_PWM;
+	}
 	return E_SUCCESS;
 }
 
@@ -86,20 +115,19 @@ e_status pwm_disable(int fd)
  * @param fd file descriptor for i2c connection
  * @param argc number of arguments
  * @param argv the arguments given
- * @return E_NOT_ENOUGH_ARGS
+ * @return E_SUCCESS or E_FAILURE_SEND_CMD
  */
 e_status send_cmd(int fd, int argc, char * argv[])
 {
-	if(argc < 3)
+	int symbol = ' ';
+	if(argc >= 3 && argv[2][0] != '\0')
 	{
-		//fprintf(stdout, "Writing empty output\n");
-		wiringPiI2CWrite(fd, ' ');
+		symbol = (unsigned char) argv[2][0];
 	}
-	else
+	//we can write 2 databytes with wiringPiI2CWriteReg8() and 3 with wiringPiI2CWriteReg16(), including the address
+	if (wiringPiI2CWrite(fd, symbol) < 0)
 	{
-		//fprintf(stdout, "Writing: %c\n", *argv[2]);
-		wiringPiI2CWrite(fd, *argv[2]);
-		//we can write 2 databytes with wiringPiI2CWriteReg8() and 3 with wiringPiI2CWriteReg16(), including the address
+		return E_FAILURE_SEND_CMD;
 	}
 	return E_SUCCESS;
 }
@@ -113,6 +141,7 @@ e_status send_cmd(int fd, int argc, char * argv[])
  */
 e_status not_enough_args(int argc, char * argv[])
 {
+	(void) argc;
 	fprintf(stderr, "%s: ", argv[0]);
 	fprintf(stderr, "Not enough arguments\n");
 	fprintf(stderr, "\n");
@@ -173,11 +202,11 @@ int main(int argc, char * argv[])
 			return not_enough_args(argc, argv);
 		}
 
-		if(strcmp(argv[2], "on"))
+		if(strcmp(argv[2], "on") == 0)
 		{
 			return pwm_enable(fd);
 		}
-		else if(strcmp(argv[2], "off"))
+		else if(strcmp(argv[2], "off") == 0)
 		{
 			return pwm_disable(fd);
 		}

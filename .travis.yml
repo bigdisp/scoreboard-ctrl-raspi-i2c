@@ -15,4 +15,5 @@ install:
   - cd Debug
 
 script:
-  - make 
+  - make
+  - make -C ../test
