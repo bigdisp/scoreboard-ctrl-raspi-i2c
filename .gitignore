@@ -1,0 +1,7 @@
+# Build output
+*.o
+*.d
+Debug/scoreboard_ctrl_i2c
+Debug/libwiringPi.so
+src/wiringPiI2C.h
+tests/build/
