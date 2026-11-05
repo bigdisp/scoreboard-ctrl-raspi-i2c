@@ -25,6 +25,44 @@ Build:
 ------
 Navigate to the debug or release folders and run `make`.
 
+i2c protocol:
+-------------
+The program sends the following bytes to the atmega (default address `0x10`):
+
+| Command                 | i2c transfer                                                       |
+|-------------------------|--------------------------------------------------------------------|
+| `target digit`          | single byte: the ASCII value of the first symbol of `digit` (blank `' '` if omitted) |
+| `pwm on`                | single byte `0x03` (enable pwm)                                    |
+| `pwm off`               | single byte `0x02` (disable pwm, LEDs permanently on)              |
+| `pwm step` / `pwm a b`  | `0x00` + 16 bit on-time, `0x01` + 16 bit off-time, then `0x04` (apply timing) |
+
+Brightness steps are clamped to the range 0 - 10.
+
+Note: these opcodes belong to the single channel pwm protocol of the
+`scoreboard_atmega8_i2c` firmware this tool was written for (2016-04).
+The later RGB firmware uses a different opcode layout (see its README);
+the PHP API (`scoreboard-php-api`) uses that newer protocol via `i2cset`.
+
+Return codes:
+-------------
+| Code | Meaning                                  |
+|------|------------------------------------------|
+| -2   | could not connect to the i2c device      |
+| -1   | not enough arguments (usage is printed)  |
+| 0    | success                                  |
+| 2    | writing a pwm command failed             |
+| 3    | writing a symbol failed                  |
+| 4    | illegal file descriptor                  |
+
+Tests:
+------
+The unit tests simulate the i2c bus with a stub of the wiringPi API and check
+the exact bytes sent for every command. No hardware or wiringPi installation
+is needed:
+
+    make -C test
+
+
 Usage:
 ------
 
