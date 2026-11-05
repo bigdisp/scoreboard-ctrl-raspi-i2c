@@ -105,6 +105,34 @@ e_status send_cmd(int fd, int argc, char * argv[])
 }
 
 /**
+ * Default i2c address of the scoreboard controller.
+ */
+#define SCOREBOARD_DEFAULT_ADDR 0x10
+
+/**
+ * Reset the controller into the i2c flash bootloader (atmega_i2c_fbl).
+ *
+ * Sends exactly the three bytes 0x10 0x4C 0xFB. The controller then triggers a
+ * watchdog reset. With the BOOTRST fuse programmed, the bootloader starts and
+ * waits about one second for the flasher (fbl_flash.py), otherwise the
+ * application simply restarts.
+ *
+ * @param fd file descriptor for i2c connection
+ * @return E_SUCCESS or E_FAILURE_SEND_CMD
+ */
+e_status enter_bootloader(int fd)
+{
+	// WriteReg16 sends the register first, then the low and the high byte:
+	// 0x10, 0x4C, 0xFB
+	if (wiringPiI2CWriteReg16(fd, 0x10, 0xFB4C) < 0)
+	{
+		fprintf(stderr, "Error while sending bootloader command\n");
+		return E_FAILURE_SEND_CMD;
+	}
+	return E_SUCCESS;
+}
+
+/**
  * Generate error message for too few arguments on stderr.
  *
  * @param argc number of arguments
@@ -120,6 +148,7 @@ e_status not_enough_args(int argc, char * argv[])
 	fprintf(stderr, "Usage:\n");
 	fprintf(stderr, "\t%s target [digit]\n", argv[0]);
 	fprintf(stderr, "\t%s pwm value|on|off [value]\n", argv[0]);
+	fprintf(stderr, "\t%s bootloader [address]\n", argv[0]);
 	fprintf(stderr, "\t\ttarget: The Target number to be changed.\n");
 	fprintf(stderr, "\t\t        Abbreviations from list below.\n");
 	fprintf(stderr, "\t\tdigit:  The ASCII Symbol to write. Can be any ASCII value,\n");
@@ -134,6 +163,8 @@ e_status not_enough_args(int argc, char * argv[])
 	fprintf(stderr, "\t\t        In that case, the led are enabled permanently.\n");
 	fprintf(stderr, "\t\t        Replacing the value by 'on' reenables pwm.\n");
 	fprintf(stderr, "\t\t        This is not done automatically if values are changed.\n");
+	fprintf(stderr, "\t\tbootloader: Reset the controller into the i2c flash bootloader.\n");
+	fprintf(stderr, "\t\t        address: i2c address of the controller (default 0x10).\n");
 	fprintf(stderr, "\n");
 	fprintf(stderr, "\t\tAbbreviation list:\n");
 	fprintf(stderr, "\t\t\tH1:  Home ones\n");
@@ -157,8 +188,22 @@ int main(int argc, char * argv[])
 		return not_enough_args(argc, argv);
 	}
 	int fd;
+	int addr = SCOREBOARD_DEFAULT_ADDR;
+
+	if(strcmp(argv[1], "bootloader") == 0 && argc >= 3)
+	{
+		char * end;
+		long a = strtol(argv[2], &end, 0);
+		if (*argv[2] == '\0' || *end != '\0' || a < 0x10 || a > 0x77)
+		{
+			fprintf(stderr, "%s: Invalid i2c address '%s' (0x10 - 0x77)\n", argv[0], argv[2]);
+			return E_FAILURE;
+		}
+		addr = (int) a;
+	}
+
 	//TODO: Get the device ID from a list to connect to
-	fd = wiringPiI2CSetup(0x10);
+	fd = wiringPiI2CSetup(addr);
 	if(-1 == fd)
 	{
 		fprintf(stderr, "%s: ", argv[0]);
@@ -166,6 +211,11 @@ int main(int argc, char * argv[])
 		return E_CONNECTION_ERROR;
 	}
 	
+	if(strcmp(argv[1], "bootloader") == 0)
+	{
+		return enter_bootloader(fd);
+	}
+
 	if(strcmp(argv[1], "pwm") == 0)
 	{
 		if(argc < 3)

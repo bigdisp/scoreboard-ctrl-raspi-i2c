@@ -30,6 +30,7 @@ Usage:
 
     scoreboard target [digit]
     scoreboard pwm value|on|off [value]
+    scoreboard bootloader [address]
         target: The Target number to be changed.
                 Abbreviations from list below.
         digit:  The ASCII Symbol to write. Can be any ASCII value,
@@ -44,6 +45,9 @@ Usage:
                 In that case, the led are enabled permanently.
                 Replacing the value by 'on' reenables pwm.
                 This is not done automatically if values are changed.
+        bootloader: Reset the controller into the i2c flash bootloader
+                (atmega_i2c_fbl). Sends 0x10 0x4C 0xFB.
+                address: i2c address of the controller (default 0x10).
     
         Abbreviation list:
                 H1:  Home ones
@@ -59,6 +63,17 @@ Alternatively, you can use the system i2c commands from the command line:
     i2cset -y 1 $addr 0x48 0x00
     ```
     Here, `0x48` and `0x00` are the register to be written and the data.
+
+Flashing new firmware:
+----------------------
+`scoreboard bootloader [address]` makes the controller reset into the
+[i2c flash bootloader](https://github.com/bigdisp/atmega_i2c_fbl). This needs a
+`scoreboard_atmega8_i2c` firmware that knows the command and the BOOTRST fuse to be
+programmed. The bootloader only waits about one second, so start the flasher
+right away. `fbl_flash.py` from the bootloader repository also sends this command
+itself. Without the tool, the same command is:
+
+    i2cset -y 1 0x10 0x10 0xFB4C w
 
 TODO
 ----
